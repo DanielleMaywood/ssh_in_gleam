@@ -27,7 +27,7 @@ ssh_connect(Host, Port, Options, NegotiationTimeout) ->
 ssh_close(ConnectionRef) ->
     case ssh:close(ConnectionRef) of
         ok -> {ok, nil};
-        {error, _} -> {error, nil}
+        {error, _} -> {error, unknown}
     end.
 
 ssh_session_channel(ConnectionRef, Timeout) ->
