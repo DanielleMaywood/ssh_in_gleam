@@ -1,25 +1,20 @@
 -module(quiet_ffi).
 -export([
-    ssh_start/0,
     ssh_connect/4,
     ssh_close/1,
     ssh_session_channel/2,
     ssh_channel_close/2,
     ssh_channel_exec/4,
-    ssh_channel_recv/2
+    ssh_channel_recv/2,
+    ssh_sftp_start_channel/1,
+    ssh_sftp_stop_channel/1,
+    ssh_sftp_write_file/4
 ]).
-
-ssh_start() ->
-    case ssh:start() of
-        ok -> {ok, nil};
-        {error, _} -> {error, unknown}
-    end.
-
 
 ssh_connect(Host, Port, Options, NegotiationTimeout) ->
     case ssh:connect(binary_to_list(Host), Port, Options, NegotiationTimeout) of
         {ok, Pid} -> {ok, Pid};
-        {error, econnrefused} -> {error, conn_refused};
+        {error, econnrefused} -> {error, connection_refused};
         {error, Reason} when is_list(Reason) -> {error, {reason, Reason}};
         {error, _} -> {error, unknown}
     end.
@@ -67,5 +62,21 @@ ssh_channel_recv(Channel, Stdout, Stderr, Timeout) ->
         _ ->
             ssh_channel_recv(Channel, Stdout, Stderr, Timeout)
     after Timeout ->
-        {lists:flatten(Stdout), lists:flatten(Stderr), 0}
+        {list_to_binary(lists:flatten(Stdout)), list_to_binary(lists:flatten(Stderr)), 0}
+    end.
+
+ssh_sftp_start_channel(Connection) ->
+    case ssh_sftp:start_channel(Connection) of
+        {ok, Pid} -> {ok, Pid};
+        {ok, Pid, _} -> {ok, Pid};
+        {error, _} -> {error, unknown}
+    end.
+
+ssh_sftp_stop_channel(Channel) ->
+    ssh_sftp:stop_channel(Channel).
+
+ssh_sftp_write_file(Channel, File, Data, Timeout) ->
+    case ssh_sftp:write_file(Channel, binary_to_list(File), Data, Timeout) of
+        ok -> {ok, nil};
+        {error, _} -> {error, unknown}
     end.

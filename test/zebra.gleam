@@ -1,36 +1,40 @@
 import gleam/int
 import gleam/io
-import gleam/result
-import quiet
+import quiet/ssh
 
 pub fn main() {
-  io.debug({
-    let hostname = "winnie"
-    let port = 22
-    let options = quiet.ConnectOptions(username: "winnie")
-    let timeout = 5000
+  let assert Ok(_) = ssh.ensure_all_started()
 
-    use conn <- quiet.with_conn(hostname, port, options, timeout)
-    use channel <- quiet.with_channel(conn, timeout: timeout)
+  let host = "piglet"
+  let port = 22
+  let options = ssh.ConnectOptions(username: "danielle")
+  let timeout = 5000
 
-    use _ <- result.try({
-      quiet.exec(channel, "ls -la ~/asdasda", timeout)
-      |> result.nil_error
+  use connection <- ssh.with_connection(host, port, options, timeout)
+
+  let assert Ok(_) =
+    ssh.with_sftp(connection, fn(channel) {
+      let assert Ok(_) =
+        ssh.write_file(
+          channel,
+          "/home/danielle/hello-world",
+          <<"Hello World!">>,
+          timeout,
+        )
     })
 
-    use out <- result.try({
-      quiet.recv(channel, timeout)
-      |> result.nil_error
+  let assert Ok(_) =
+    ssh.with_session(connection, timeout, fn(channel) {
+      let assert Ok(_) = ssh.exec(channel, "ls -la ~/", timeout)
+
+      let #(stdout, stderr, status) = ssh.recv(channel, timeout)
+
+      io.println("STDOUT:")
+      io.println(stdout)
+
+      io.println("STDERR:")
+      io.println(stderr)
+
+      io.println("STATUS: " <> int.to_string(status))
     })
-
-    io.println("STDOUT:")
-    io.println(out.stdout)
-
-    io.println("STDERR:")
-    io.println(out.stderr)
-
-    io.println("STATUS: " <> int.to_string(out.status))
-
-    Ok(Nil)
-  })
 }
