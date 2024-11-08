@@ -51,7 +51,6 @@ ssh_channel_recv(Channel, Stdout, Stderr, Timeout) ->
             ssh_channel_recv(Channel, Stdout, [Stderr, Data], Timeout);
 
         {ssh_cm, ConnRef, {eof, Channel}} ->
-            ssh_connection:send_eof(ConnRef, Channel),
             ssh_channel_recv(Channel, Stdout, Stderr, Timeout);
 
         {ssh_cm, _ConnRef, {exit_status, Channel, Status}} ->
